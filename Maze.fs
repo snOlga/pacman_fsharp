@@ -7,6 +7,7 @@ let EMPT = " "
 let APPL = "."
 
 let PLAYER_SYMBOL = "o"
+let NPC_SYMBOL = "@"
 
 let MazeMatrix =
     [| [| APPL; APPL; APPL; WALL; APPL; APPL; APPL; APPL; APPL; APPL; APPL; APPL; APPL; APPL; APPL; APPL; APPL; WALL; APPL; APPL; APPL|] 

@@ -2,8 +2,6 @@ module Game
 open System
 open System.Threading
 
-type Position = { X: int; Y: int }
-
 type Direction =
     | Left
     | Right
@@ -11,18 +9,22 @@ type Direction =
     | Down
     | None
 
+type Position = { X: int; Y: int; FutureDirection: Direction }
+
 type State = 
     {
         Maze: string[][]
         PlayerPosition: Position
         Score: int
+        NPC1Position: Position
     }
 
 let initGame = 
     {
         Maze = Maze.MazeMatrix
-        PlayerPosition = {X = 0; Y = 0}
+        PlayerPosition = {X = 0; Y = 0; FutureDirection = Direction.None}
         Score = 0
+        NPC1Position = {X = 10; Y = 10; FutureDirection = Direction.None}
     }
 
 let printField (gameState:State) =
@@ -30,11 +32,15 @@ let printField (gameState:State) =
         let line = gameState.Maze[i]
         for j = 0 to (line.Length - 1) do
             let chr = line[j]
-            if gameState.PlayerPosition.X = j && gameState.PlayerPosition.Y = i then
-                printf "%s" Maze.PLAYER_SYMBOL
-            else
-                printf "%s" chr
+            match (i,j) with
+            | x when fst x = gameState.PlayerPosition.Y && snd x = gameState.PlayerPosition.X -> printf "%s" Maze.PLAYER_SYMBOL
+            | x when fst x = gameState.NPC1Position.Y && snd x = gameState.NPC1Position.X -> printf "%s" Maze.NPC_SYMBOL
+            | _ -> printf "%s" chr
         printfn ""
+
+let printGame(gameState:State) =
+    printField gameState
+    printfn "%A" gameState.Score
 
 let getDirectionInput () =
     match Console.ReadKey().Key with
@@ -44,8 +50,8 @@ let getDirectionInput () =
     | ConsoleKey.RightArrow -> Direction.Right
     | _ -> Direction.None
 
-let moveSomeone position direction =
-    match direction with
+let moveSomeone position =
+    match position.FutureDirection with
     | Direction.Up when position.Y > 0 && 
         Maze.MazeMatrix[position.Y-1][position.X] <> Maze.WALL -> 
         { position with Y = position.Y-1 } // inversion of y
@@ -60,6 +66,21 @@ let moveSomeone position direction =
         { position with X = position.X+1 }
     | _ -> position
 
+let moveNPC position =
+    let moved = moveSomeone position
+    if moved = position then
+        let random = new Random()
+        let futureDirection = 
+            match random.Next(4) with
+            | 0 -> Direction.Up
+            | 1 -> Direction.Down
+            | 2 -> Direction.Left
+            | 3 -> Direction.Right
+            | _ -> Direction.None
+        moveSomeone { position with FutureDirection = futureDirection }
+    else
+        moved
+
 let eatApple (gameState:State) =
     let playerX = gameState.PlayerPosition.X
     let playerY = gameState.PlayerPosition.Y
@@ -72,9 +93,21 @@ let eatApple (gameState:State) =
     else
         gameState.Maze
 
+let countScore (gameState:State) =
+    let playerX = gameState.PlayerPosition.X
+    let playerY = gameState.PlayerPosition.Y
+    if gameState.Maze[playerY][playerX] = Maze.APPL then
+        gameState.Score + 1
+    else
+        gameState.Score
+
 let rec run (gameState:State) =
     Thread.Sleep(100)
     Console.Clear()
-    printField gameState
+    printGame gameState
     let inputDirection = getDirectionInput ()
-    run { gameState with PlayerPosition = (moveSomeone gameState.PlayerPosition inputDirection); Maze = eatApple gameState}
+    let movedPlayer = moveSomeone { gameState.PlayerPosition with FutureDirection = inputDirection}
+    let movedNPC1 = moveNPC gameState.NPC1Position
+    let mazeNoApple = eatApple gameState
+    let countedScore = countScore gameState
+    run { gameState with PlayerPosition = movedPlayer; Maze = mazeNoApple; Score = countedScore; NPC1Position = movedNPC1}
