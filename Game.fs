@@ -13,34 +13,23 @@ type Direction =
 
 type State = 
     {
-        Field: string[][]
+        Maze: string[][]
         PlayerPosition: Position
     }
 
-let PLAYER_SYMBOL = "o"
-
 let initGame = 
     {
-        Field = [| 
-            [|"_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"|]
-            [|"_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"|]
-            [|"_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"|]
-            [|"_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"|]
-            [|"_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"|]
-            [|"_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"|]
-            [|"_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"|]
-            [|"_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"|]
-            [|"_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"; "_"|] |]
+        Maze = Maze.mazeMatrix
         PlayerPosition = {X = 0; Y = 0}
     }
 
 let printField (gameState:State) =
-    for i = 0 to (gameState.Field.Length - 1) do
-        let line = gameState.Field[i]
+    for i = 0 to (gameState.Maze.Length - 1) do
+        let line = gameState.Maze[i]
         for j = 0 to (line.Length - 1) do
             let chr = line[j]
             if gameState.PlayerPosition.X = j && gameState.PlayerPosition.Y = i then
-                printf "%s" PLAYER_SYMBOL
+                printf "%s" Maze.PLAYER_SYMBOL
             else
                 printf "%s" chr
         printfn ""
