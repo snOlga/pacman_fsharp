@@ -46,16 +46,12 @@ let printField (gameState:State) =
         printfn ""
 
 let getDirectionInput () =
-    let keyboardState = Console.ReadLine().ToLower().ToCharArray()
-    match keyboardState with
-          | [||] -> None
-          | pressedKeys ->
-              match Array.head pressedKeys with
-              | 'w' -> Direction.Up
-              | 'a' -> Direction.Left
-              | 's' -> Direction.Down
-              | 'd' -> Direction.Right
-              | _ -> Direction.None
+    match Console.ReadKey().Key with
+    | ConsoleKey.UpArrow -> Direction.Up
+    | ConsoleKey.DownArrow -> Direction.Down
+    | ConsoleKey.LeftArrow -> Direction.Left
+    | ConsoleKey.RightArrow -> Direction.Right
+    | _ -> Direction.None
 
 let moveSomeone position direction =
     match direction with
@@ -66,7 +62,7 @@ let moveSomeone position direction =
     | Direction.None -> position
 
 let rec run (gameState:State) =
-    Thread.Sleep(1000)
+    Thread.Sleep(100)
     Console.Clear()
     printField gameState
     let inputDirection = getDirectionInput ()
