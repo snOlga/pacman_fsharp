@@ -18,7 +18,7 @@ type State =
         Score: int
         Lifes: int
         IsRunning: bool
-        NPC1Position: Position
+        NPCs: Position[]
     }
 
 let initGame = 
@@ -28,17 +28,25 @@ let initGame =
         Score = 0
         Lifes = 3
         IsRunning = true
-        NPC1Position = {X = 11; Y = 9; FutureDirection = Direction.None}
+        NPCs = [|{X = 11; Y = 9; FutureDirection = Direction.None};
+                {X = 9; Y = 9; FutureDirection = Direction.None};
+                {X = 12; Y = 9; FutureDirection = Direction.None}
+                |]
     }
 
+let rec willPrintNPC currentPosition npcs =
+    match Array.length npcs with
+    | 0 -> false
+    | _ -> ((Array.head npcs).X = currentPosition.X && (Array.head npcs).Y = currentPosition.Y) || (willPrintNPC currentPosition (Array.tail npcs))
+
 let printField (gameState:State) =
-    for i = 0 to (gameState.Maze.Length - 1) do
-        let line = gameState.Maze[i]
-        for j = 0 to (line.Length - 1) do
-            let chr = line[j]
-            match (i,j) with
+    for yMaze = 0 to (gameState.Maze.Length - 1) do
+        let line = gameState.Maze[yMaze]
+        for xMaze = 0 to (line.Length - 1) do
+            let chr = line[xMaze]
+            match (yMaze,xMaze) with
             | x when fst x = gameState.PlayerPosition.Y && snd x = gameState.PlayerPosition.X -> printf "%s" Maze.PLAYER_SYMBOL
-            | x when fst x = gameState.NPC1Position.Y && snd x = gameState.NPC1Position.X -> printf "%s" Maze.NPC_SYMBOL
+            | x when (willPrintNPC { X=xMaze; Y=yMaze; FutureDirection = Direction.None } gameState.NPCs) -> printf "%s" Maze.NPC_SYMBOL
             | _ -> printf "%s" chr
         printfn ""
 
@@ -99,6 +107,9 @@ let moveNPC position =
     else
         moved
 
+let moveNPCs (gameState:State) =
+    Array.map moveNPC gameState.NPCs
+
 let eatApple (gameState:State) =
     let playerX = gameState.PlayerPosition.X
     let playerY = gameState.PlayerPosition.Y
@@ -119,11 +130,15 @@ let countScore (gameState:State) =
     else
         gameState.Score
 
-let loseLife (gameState:State) =
-    if gameState.PlayerPosition.X = gameState.NPC1Position.X && gameState.PlayerPosition.Y = gameState.NPC1Position.Y then
-        (gameState.Lifes - 1)
-    else
-        gameState.Lifes
+let rec loseLife (gameState:State) =
+    match Array.length gameState.NPCs with
+    | 0 -> gameState.Lifes
+    | _ ->
+        if gameState.PlayerPosition.X = ((Array.head gameState.NPCs).X) && 
+            gameState.PlayerPosition.Y = ((Array.head gameState.NPCs).Y) then
+            (gameState.Lifes - 1)
+        else
+            loseLife {gameState with NPCs = Array.tail gameState.NPCs}
 
 let checkLosing (gameState:State) =
     gameState.Lifes > 0
@@ -148,17 +163,12 @@ let rec run (gameState:State) =
         printGame gameState
         let inputDirection = getDirectionInput ()
         let movedPlayer = moveSomeone { gameState.PlayerPosition with FutureDirection = inputDirection}
-        let movedNPC1 = moveNPC gameState.NPC1Position
-        let mazeNoApple = eatApple gameState
-        let countedScore = countScore gameState
-        let newLifes = loseLife gameState
-        let isRunning = checkLosing gameState
-        run { Maze = mazeNoApple;
+        run { Maze = eatApple gameState;
                 PlayerPosition = movedPlayer; 
-                Score = countedScore; 
-                NPC1Position = movedNPC1;
-                Lifes = newLifes;
-                IsRunning = isRunning }
+                Score = countScore gameState; 
+                NPCs = moveNPCs gameState;
+                Lifes = loseLife gameState;
+                IsRunning = checkLosing gameState }
     | false -> 
         Console.Clear()
         printLose gameState
