@@ -22,9 +22,9 @@ type State =
 let initGame = 
     {
         Maze = Maze.MazeMatrix
-        PlayerPosition = {X = 0; Y = 0; FutureDirection = Direction.None}
+        PlayerPosition = {X = 1; Y = 1; FutureDirection = Direction.None}
         Score = 0
-        NPC1Position = {X = 10; Y = 10; FutureDirection = Direction.None}
+        NPC1Position = {X = 11; Y = 11; FutureDirection = Direction.None}
     }
 
 let printField (gameState:State) =
@@ -43,12 +43,15 @@ let printGame(gameState:State) =
     printfn "%A" gameState.Score
 
 let getDirectionInput () =
-    match Console.ReadKey().Key with
-    | ConsoleKey.UpArrow -> Direction.Up
-    | ConsoleKey.DownArrow -> Direction.Down
-    | ConsoleKey.LeftArrow -> Direction.Left
-    | ConsoleKey.RightArrow -> Direction.Right
-    | _ -> Direction.None
+    if not Console.KeyAvailable then
+        Direction.None
+    else
+        match Console.ReadKey().Key with
+        | ConsoleKey.UpArrow -> Direction.Up
+        | ConsoleKey.DownArrow -> Direction.Down
+        | ConsoleKey.LeftArrow -> Direction.Left
+        | ConsoleKey.RightArrow -> Direction.Right
+        | _ -> Direction.None
 
 let moveSomeone position =
     match position.FutureDirection with
@@ -102,7 +105,7 @@ let countScore (gameState:State) =
         gameState.Score
 
 let rec run (gameState:State) =
-    Thread.Sleep(100)
+    Thread.Sleep(200)
     Console.Clear()
     printGame gameState
     let inputDirection = getDirectionInput ()
