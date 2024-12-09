@@ -28,9 +28,9 @@ let initGame =
         Score = 0
         Lifes = 3
         IsRunning = true
-        NPCs = [|{X = 11; Y = 9; FutureDirection = Direction.None};
-                {X = 9; Y = 9; FutureDirection = Direction.None};
-                {X = 12; Y = 9; FutureDirection = Direction.None}
+        NPCs = [|{X = 11; Y = 11; FutureDirection = Direction.None};
+                {X = 9; Y = 11; FutureDirection = Direction.None};
+                {X = 12; Y = 11; FutureDirection = Direction.None}
                 |]
     }
 
@@ -92,6 +92,22 @@ let moveSomeone position =
         { position with X = 0 }
     | _ -> position
 
+let checkEntranceForNPC position = 
+    match position.FutureDirection with 
+    | direcrion when (direcrion = Direction.Up || direcrion = Direction.Down) &&
+        Maze.MazeMatrix[position.Y][position.X-1] <> Maze.WALL -> 
+        moveSomeone { position with FutureDirection=Direction.Left }
+    | direcrion when (direcrion = Direction.Up || direcrion = Direction.Down) &&
+        Maze.MazeMatrix[position.Y][position.X+1] <> Maze.WALL -> 
+        moveSomeone { position with FutureDirection=Direction.Right }
+    | direcrion when (direcrion = Direction.Left || direcrion = Direction.Right) &&
+        Maze.MazeMatrix[position.Y-1][position.X] <> Maze.WALL -> 
+        moveSomeone { position with FutureDirection=Direction.Up }
+    | direcrion when (direcrion = Direction.Left || direcrion = Direction.Right) &&
+        Maze.MazeMatrix[position.Y+1][position.X] <> Maze.WALL -> 
+        moveSomeone { position with FutureDirection=Direction.Down }
+    | _ -> position
+
 let moveNPC position =
     let moved = moveSomeone position
     if moved = position then
@@ -105,7 +121,11 @@ let moveNPC position =
             | _ -> Direction.None
         moveSomeone { position with FutureDirection = futureDirection }
     else
-        moved
+        let canMoveToEntrance = checkEntranceForNPC { position with FutureDirection=moved.FutureDirection }
+        if canMoveToEntrance = { position with FutureDirection=moved.FutureDirection } then
+            moved
+        else
+            canMoveToEntrance
 
 let moveNPCs (gameState:State) =
     Array.map moveNPC gameState.NPCs
@@ -113,7 +133,7 @@ let moveNPCs (gameState:State) =
 let eatApple (gameState:State) =
     let playerX = gameState.PlayerPosition.X
     let playerY = gameState.PlayerPosition.Y
-    if gameState.Maze[playerY][playerX] = Maze.APPL then
+    if gameState.Maze[playerY][playerX] = Maze.APPL || gameState.Maze[playerY][playerX] = Maze.BIG_APPL then
         gameState.Maze |> Array.mapi (fun i line -> 
             if i = playerY then 
                 line |> Array.mapi (fun j chr -> if j = playerX then Maze.EMPT else chr)
@@ -127,6 +147,8 @@ let countScore (gameState:State) =
     let playerY = gameState.PlayerPosition.Y
     if gameState.Maze[playerY][playerX] = Maze.APPL then
         gameState.Score + 1
+    elif gameState.Maze[playerY][playerX] = Maze.BIG_APPL then
+        gameState.Score + 10
     else
         gameState.Score
 
