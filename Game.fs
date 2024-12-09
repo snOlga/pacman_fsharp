@@ -11,6 +11,10 @@ type Direction =
 
 type Position = { X: int; Y: int; FutureDirection: Direction }
 
+let EDIBLE_TICKS = 50
+
+let DEFAULT_NPC_POSITION = {X = 11; Y = 11; FutureDirection = Direction.None}
+
 type State = 
     {
         Maze: string[][]
@@ -19,6 +23,8 @@ type State =
         Lifes: int
         IsRunning: bool
         NPCs: Position[]
+        IsNPCsEdible: bool
+        EdibleTicks: int
     }
 
 let initGame = 
@@ -30,8 +36,10 @@ let initGame =
         IsRunning = true
         NPCs = [|{X = 11; Y = 11; FutureDirection = Direction.None};
                 {X = 9; Y = 11; FutureDirection = Direction.None};
-                {X = 12; Y = 11; FutureDirection = Direction.None}
+                {X = 13; Y = 11; FutureDirection = Direction.None}
                 |]
+        IsNPCsEdible = false
+        EdibleTicks = 0
     }
 
 let rec willPrintNPC currentPosition npcs =
@@ -45,8 +53,10 @@ let printField (gameState:State) =
         for xMaze = 0 to (line.Length - 1) do
             let chr = line[xMaze]
             match (yMaze,xMaze) with
-            | x when fst x = gameState.PlayerPosition.Y && snd x = gameState.PlayerPosition.X -> printf "%s" Maze.PLAYER_SYMBOL
-            | x when (willPrintNPC { X=xMaze; Y=yMaze; FutureDirection = Direction.None } gameState.NPCs) -> printf "%s" Maze.NPC_SYMBOL
+            | x when fst x = gameState.PlayerPosition.Y && snd x = gameState.PlayerPosition.X -> 
+                printf "%s" Maze.PLAYER_SYMBOL
+            | x when (willPrintNPC { X=xMaze; Y=yMaze; FutureDirection = Direction.None } gameState.NPCs) -> 
+                printf "%s" (if gameState.IsNPCsEdible then Maze.EDIBLE_NPC_SYMBOL else Maze.NPC_SYMBOL)
             | _ -> printf "%s" chr
         printfn ""
 
@@ -142,6 +152,12 @@ let eatApple (gameState:State) =
     else
         gameState.Maze
 
+let makeNPCsEdible (gameState:State) =
+    gameState.Maze[gameState.PlayerPosition.Y][gameState.PlayerPosition.X] = Maze.BIG_APPL || gameState.EdibleTicks > 0
+
+let tickEdible (gameState:State) =
+    gameState.EdibleTicks - 1
+
 let countScore (gameState:State) =
     let playerX = gameState.PlayerPosition.X
     let playerY = gameState.PlayerPosition.Y
@@ -152,15 +168,31 @@ let countScore (gameState:State) =
     else
         gameState.Score
 
+let rec countScoreOfEdibleNPC (gameState:State) =
+    if gameState.IsNPCsEdible then
+        let playerX = gameState.PlayerPosition.X
+        let playerY = gameState.PlayerPosition.Y
+        let npcs = gameState.NPCs
+        match Array.length npcs with
+        | 0 -> gameState.Score
+        | _ -> 
+            if (Array.head npcs).X = playerX && (Array.head npcs).Y = playerY then 
+                gameState.Score + 100 
+            else
+                countScoreOfEdibleNPC { gameState with NPCs = (Array.tail gameState.NPCs) }
+    else
+        gameState.Score
+
 let rec loseLife (gameState:State) =
     match Array.length gameState.NPCs with
     | 0 -> gameState.Lifes
-    | _ ->
+    | _ when not gameState.IsNPCsEdible ->
         if gameState.PlayerPosition.X = ((Array.head gameState.NPCs).X) && 
             gameState.PlayerPosition.Y = ((Array.head gameState.NPCs).Y) then
             (gameState.Lifes - 1)
         else
             loseLife {gameState with NPCs = Array.tail gameState.NPCs}
+    | _ -> gameState.Lifes
 
 let checkLosing (gameState:State) =
     gameState.Lifes > 0
@@ -185,12 +217,18 @@ let rec run (gameState:State) =
         printGame gameState
         let inputDirection = getDirectionInput ()
         let movedPlayer = moveSomeone { gameState.PlayerPosition with FutureDirection = inputDirection}
+        let isEdible = makeNPCsEdible gameState
+        let ticks = (if isEdible <> gameState.IsNPCsEdible && isEdible then EDIBLE_TICKS else tickEdible gameState)
+        let score = countScore gameState
+        let scoreAfterNPC = countScoreOfEdibleNPC { gameState with Score = score }
         run { Maze = eatApple gameState;
                 PlayerPosition = movedPlayer; 
-                Score = countScore gameState; 
+                Score = scoreAfterNPC; 
                 NPCs = moveNPCs gameState;
                 Lifes = loseLife gameState;
-                IsRunning = checkLosing gameState }
+                IsRunning = checkLosing gameState;
+                IsNPCsEdible = makeNPCsEdible gameState;
+                EdibleTicks = ticks}
     | false -> 
         Console.Clear()
         printLose gameState
