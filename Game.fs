@@ -194,6 +194,17 @@ let rec loseLife (gameState:State) =
             loseLife {gameState with NPCs = Array.tail gameState.NPCs}
     | _ -> gameState.Lifes
 
+let rec goNPChome (gameState:State) =
+    match Array.length gameState.NPCs with
+    | 0 -> gameState.NPCs
+    | _ when gameState.IsNPCsEdible ->
+        if gameState.PlayerPosition.X = ((Array.head gameState.NPCs).X) && 
+            gameState.PlayerPosition.Y = ((Array.head gameState.NPCs).Y) then
+            Array.append (Array.tail gameState.NPCs) (Array.singleton DEFAULT_NPC_POSITION)
+        else
+            Array.append (Array.singleton (Array.head gameState.NPCs)) (goNPChome { gameState with NPCs = (Array.tail gameState.NPCs) })
+    | _ -> gameState.NPCs
+
 let checkLosing (gameState:State) =
     gameState.Lifes > 0
     
@@ -221,10 +232,12 @@ let rec run (gameState:State) =
         let ticks = (if isEdible <> gameState.IsNPCsEdible && isEdible then EDIBLE_TICKS else tickEdible gameState)
         let score = countScore gameState
         let scoreAfterNPC = countScoreOfEdibleNPC { gameState with Score = score }
+        let NPCmbGoHome = goNPChome gameState
+        let movedNPC = moveNPCs { gameState with NPCs = NPCmbGoHome }
         run { Maze = eatApple gameState;
                 PlayerPosition = movedPlayer; 
                 Score = scoreAfterNPC; 
-                NPCs = moveNPCs gameState;
+                NPCs = movedNPC;
                 Lifes = loseLife gameState;
                 IsRunning = checkLosing gameState;
                 IsNPCsEdible = makeNPCsEdible gameState;
