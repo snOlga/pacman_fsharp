@@ -224,7 +224,7 @@ let rec run (gameState:State) =
     match gameState.IsRunning with
     | true ->
         Thread.Sleep(200)
-        Console.Clear()
+        Console.SetCursorPosition(0,0)
         printGame gameState
         let inputDirection = getDirectionInput ()
         let movedPlayer = moveSomeone { gameState.PlayerPosition with FutureDirection = inputDirection}
